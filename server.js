@@ -1,14 +1,24 @@
 const express = require('express');
-const EfiPay = require('sdk-node-apis-efi');
-const fs = require('fs');
-const path = require('path');
+    const EfiPay = require('sdk-node-apis-efi');
+    const fs = require('fs');
+    const path = require('path');
 
-const app = express();
-app.use(express.json());
+    const app = express();
 
-const PORT = process.env.PORT || 3000;
+    app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+    });
 
-// Configuração EFI
+    app.use(express.json());
+
+    const PORT = process.env.PORT || 3000;
+
 const options = {
     client_id: process.env.EFI_CLIENT_ID,
     client_secret: process.env.EFI_CLIENT_SECRET,
@@ -18,17 +28,14 @@ const options = {
 
 const efipay = new EfiPay(options);
 
-// Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Criar Pix
 app.post('/api/pix/create', async (req, res) => {
     try {
         const { txid, valor, chave_pix, nome_devedor, cpf_devedor } = req.body;
 
-        // Criar cobrança
         const body = {
             calendario: { expiracao: 3600 },
             devedor: { cpf: cpf_devedor, nome: nome_devedor },
@@ -38,8 +45,6 @@ app.post('/api/pix/create', async (req, res) => {
         };
 
         const cobResponse = await efipay.pixCreateImmediateCharge({}, { txid }, body);
-        
-        // Gerar QR Code
         const qrResponse = await efipay.pixGenerateQRCode({ id: cobResponse.loc.id });
 
         res.json({
