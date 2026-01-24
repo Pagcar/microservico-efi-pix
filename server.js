@@ -64,6 +64,36 @@ const express = require('express');
     }
     });
 
+    app.post('/api/pix/consultar', async (req, res) => {
+    try {
+      const { txid } = req.body;
+      
+      if (!txid) {
+        return res.status(400).json({ success: false, error: 'txid é obrigatório' });
+      }
+      
+      const efipay = new EfiPay(options);
+      const cobranca = await efipay.pixDetailCharge({ txid });
+
+      res.json({
+        success: true,
+        data: {
+          txid: cobranca.txid,
+          status: cobranca.status,
+          valor: cobranca.valor?.original,
+          qr_code: cobranca.pixCopiaECola,
+          copia_e_cola: cobranca.pixCopiaECola
+        }
+      });
+    } catch (error) {
+      console.error('❌ Erro ao consultar Pix:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+    });
+
     app.listen(PORT, () => {
     console.log(`✅ Microserviço EFI rodando na porta ${PORT}`);
     });
